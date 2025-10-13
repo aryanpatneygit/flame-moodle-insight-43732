@@ -46,7 +46,9 @@ export const useAuth = () => {
 
   const fetchUserRole = async (userId: string) => {
     try {
+      // @ts-ignore - user_roles table exists but types need regeneration
       const { data, error } = await supabase
+        // @ts-ignore
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
@@ -54,8 +56,11 @@ export const useAuth = () => {
 
       if (error) {
         console.error("Error fetching user role:", error);
-      } else {
-        setUserRole(data?.role ?? null);
+      }
+      
+      if (data) {
+        // @ts-ignore - user_roles table exists but types need regeneration  
+        setUserRole(data.role ?? null);
       }
     } catch (error) {
       console.error("Error in fetchUserRole:", error);
