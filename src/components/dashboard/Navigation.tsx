@@ -9,8 +9,7 @@ import {
   Settings, 
   RefreshCw,
   Bell,
-  ChevronDown,
-  LogOut
+  ChevronDown
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -25,23 +24,10 @@ interface NavigationProps {
   activeView: 'dashboard' | 'students' | 'courses' | 'settings';
   onViewChange: (view: 'dashboard' | 'students' | 'courses' | 'settings') => void;
   onSync: () => void;
-  onSignOut: () => void;
-  userRole: string | null;
 }
 
-export const Navigation = ({ activeView, onViewChange, onSync, onSignOut, userRole }: NavigationProps) => {
+export const Navigation = ({ activeView, onViewChange, onSync }: NavigationProps) => {
   const [syncLoading, setSyncLoading] = useState(false);
-
-  const getRoleBadge = () => {
-    if (!userRole) return "User";
-    const roleLabels: Record<string, string> = {
-      admin: "Admin",
-      academic_head: "Academic Head",
-      coordinator: "Coordinator",
-      viewer: "Viewer"
-    };
-    return roleLabels[userRole] || userRole;
-  };
 
   const handleSync = async () => {
     setSyncLoading(true);
@@ -115,10 +101,10 @@ export const Navigation = ({ activeView, onViewChange, onSync, onSignOut, userRo
                 <Button variant="ghost" size="sm" className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-gradient-to-r from-primary to-info text-white text-sm font-medium">
-                      {getRoleBadge().charAt(0)}
+                      U
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden sm:inline">{getRoleBadge()}</span>
+                  <span className="hidden sm:inline">User</span>
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -126,18 +112,12 @@ export const Navigation = ({ activeView, onViewChange, onSync, onSignOut, userRo
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium">My Account</p>
-                    <p className="text-xs text-muted-foreground">{getRoleBadge()}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onViewChange('settings')}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onSignOut} className="text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign Out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
