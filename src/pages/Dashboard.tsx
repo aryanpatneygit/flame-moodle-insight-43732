@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Navigation } from "@/components/dashboard/Navigation";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { ProgressChart } from "@/components/dashboard/ProgressChart";
@@ -9,34 +8,12 @@ import { CourseAnalytics } from "@/components/dashboard/CourseAnalytics";
 import { mockStudents, mockCourses, getOverallStats, Student } from "@/lib/mockData";
 import { Users, GraduationCap, TrendingUp, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { Loader2 } from "lucide-react";
 
 const Dashboard = () => {
-  const navigate = useNavigate();
-  const { user, loading, signOut, userRole } = useAuth();
   const [activeView, setActiveView] = useState<'dashboard' | 'students' | 'courses' | 'settings'>('dashboard');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
-    }
-  }, [user, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
 
   const stats = getOverallStats();
 
@@ -262,8 +239,6 @@ const Dashboard = () => {
         activeView={activeView} 
         onViewChange={setActiveView}
         onSync={handleSync}
-        onSignOut={signOut}
-        userRole={userRole}
       />
       
       <main className="container mx-auto px-4 py-8">
