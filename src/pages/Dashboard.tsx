@@ -5,25 +5,53 @@ import { ProgressChart } from "@/components/dashboard/ProgressChart";
 import { StudentsTable } from "@/components/dashboard/StudentsTable";
 import { StudentDetailModal } from "@/components/dashboard/StudentDetailModal";
 import { CourseAnalytics } from "@/components/dashboard/CourseAnalytics";
+import { CSVUploader } from "@/components/dashboard/CSVUploader";
 import { mockStudents, mockCourses, getOverallStats, Student } from "@/lib/mockData";
+import type { Student as CSVStudent } from "@/lib/csvParser";
 import { Users, GraduationCap, TrendingUp, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
-  const [activeView, setActiveView] = useState<'dashboard' | 'students' | 'courses' | 'settings'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'students' | 'courses' | 'settings' | 'upload'>('dashboard');
+  const [students, setStudents] = useState<Student[]>(mockStudents);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const { toast } = useToast();
 
-  const stats = getOverallStats();
+  const handleDataLoaded = (uploadedStudents: CSVStudent[]) => {
+    setStudents(uploadedStudents as Student[]);
+    setActiveView('dashboard');
+    toast({
+      title: "Data Updated",
+      description: "Dashboard is now displaying data from your CSV"
+    });
+  };
+
+  // Calculate stats from current students
+  const calculateStats = () => {
+    const totalEnrolled = students.length;
+    const completed = students.filter(s => s.status === 'completed').length;
+    const inProgress = students.filter(s => s.status === 'in-progress').length;
+    const notStarted = students.filter(s => s.status === 'not-started').length;
+
+    return {
+      totalEnrolled,
+      completed,
+      inProgress,
+      notStarted,
+      completionRate: Math.round((completed / totalEnrolled) * 100)
+    };
+  };
+
+  const stats = calculateStats();
 
   // Prepare chart data
   const chartData = mockCourses.map(course => ({
-    name: course.name.split(' ').slice(0, 2).join(' '), // Shorten names for display
-    enrolled: course.enrolledStudents,
-    completed: course.completedStudents,
-    inProgress: course.inProgressStudents,
-    notStarted: course.notStartedStudents
+    name: course.name.split(' ').slice(0, 2).join(' '),
+    enrolled: stats.totalEnrolled,
+    completed: stats.completed,
+    inProgress: stats.inProgress,
+    notStarted: stats.notStarted
   }));
 
   const handleStudentSelect = (student: Student) => {
@@ -128,11 +156,11 @@ const Dashboard = () => {
                   <p className="text-xs text-muted-foreground">Detailed student progress</p>
                 </button>
                 <button
-                  onClick={() => setActiveView('courses')}
+                  onClick={() => setActiveView('upload')}
                   className="w-full text-left px-3 py-2 rounded-md hover:bg-primary/10 transition-colors"
                 >
-                  <p className="font-medium text-sm">Course Analytics</p>
-                  <p className="text-xs text-muted-foreground">Performance metrics</p>
+                  <p className="font-medium text-sm">Upload CSV</p>
+                  <p className="text-xs text-muted-foreground">Import student data</p>
                 </button>
                 <button
                   onClick={handleSync}
@@ -149,7 +177,7 @@ const Dashboard = () => {
 
       {/* Students Table */}
       <StudentsTable 
-        students={mockStudents} 
+        students={students} 
         onStudentSelect={handleStudentSelect}
       />
     </div>
@@ -164,14 +192,41 @@ const Dashboard = () => {
         </p>
       </div>
       <StudentsTable 
-        students={mockStudents} 
+        students={students} 
         onStudentSelect={handleStudentSelect}
       />
     </div>
   );
 
   const renderCoursesView = () => (
-    <CourseAnalytics courses={mockCourses} />
+    <CourseAnalytics courses={mockCourses} students={students} />
+  );
+
+  const renderUploadView = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Upload Student Data</h2>
+        <p className="text-muted-foreground">
+          Import student progress data from a CSV file to update the dashboard
+        </p>
+      </div>
+      <CSVUploader onDataLoaded={handleDataLoaded} />
+      
+      <div className="bg-card border rounded-lg p-6">
+        <h3 className="text-lg font-semibold mb-4">CSV Format Requirements</h3>
+        <div className="space-y-3 text-sm">
+          <p>Your CSV file should include the following columns:</p>
+          <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+            <li><strong>ID</strong> - Student identifier</li>
+            <li><strong>Name</strong> - Student full name</li>
+            <li><strong>Email address</strong> - Student email</li>
+            <li><strong>Activity columns</strong> - One column per activity (e.g., "Course Outline", "Welcome Video")</li>
+            <li><strong>Completion status</strong> - Each activity column should contain "Completed" or "Not completed"</li>
+          </ul>
+          <p className="pt-3">The system will calculate completion percentages and progress automatically.</p>
+        </div>
+      </div>
+    </div>
   );
 
   const renderSettingsView = () => (
@@ -245,6 +300,7 @@ const Dashboard = () => {
         {activeView === 'dashboard' && renderDashboardView()}
         {activeView === 'students' && renderStudentsView()}
         {activeView === 'courses' && renderCoursesView()}
+        {activeView === 'upload' && renderUploadView()}
         {activeView === 'settings' && renderSettingsView()}
       </main>
 

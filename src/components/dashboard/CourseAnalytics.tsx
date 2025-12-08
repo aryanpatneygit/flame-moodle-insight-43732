@@ -1,16 +1,43 @@
-import { Course } from "@/lib/mockData";
+import { useState } from "react";
+import type { Course, Student } from "@/lib/mockData";
+import { CourseDetailModal } from "./CourseDetailModal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Users, BookOpen, TrendingUp, Download } from "lucide-react";
+import { Users, BookOpen, TrendingUp, Download, ChevronRight } from "lucide-react";
 
 interface CourseAnalyticsProps {
   courses: Course[];
+  students?: Student[];
 }
 
-export const CourseAnalytics = ({ courses }: CourseAnalyticsProps) => {
+export const CourseAnalytics = ({ courses, students = [] }: CourseAnalyticsProps) => {
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Get unique courses from students
+  const getCoursesFromStudents = (): { name: string; students: Student[] }[] => {
+    const courseMap = new Map<string, Student[]>();
+    
+    students.forEach(student => {
+      student.courses.forEach(course => {
+        if (!courseMap.has(course.courseName)) {
+          courseMap.set(course.courseName, []);
+        }
+        courseMap.get(course.courseName)!.push(student);
+      });
+    });
+
+    return Array.from(courseMap.entries()).map(([name, courseStudents]) => ({
+      name,
+      students: courseStudents
+    }));
+  };
+
+  const allCourses = getCoursesFromStudents();
+  
   // Prepare data for charts
   const pieData = courses.map(course => ({
     name: course.name,
@@ -23,7 +50,12 @@ export const CourseAnalytics = ({ courses }: CourseAnalyticsProps) => {
   const COLORS = ['hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--destructive))'];
 
   const getCompletionRate = (course: Course) => {
-    return Math.round((course.completedStudents / course.enrolledStudents) * 100);
+    return course.enrolledStudents > 0 ? Math.round((course.completedStudents / course.enrolledStudents) * 100) : 0;
+  };
+
+  const handleOpenCourseDetail = (courseName: string) => {
+    setSelectedCourse(courseName);
+    setIsDetailModalOpen(true);
   };
 
   const handleExportCourseData = () => {
@@ -197,7 +229,7 @@ export const CourseAnalytics = ({ courses }: CourseAnalyticsProps) => {
                     <p className="text-sm text-muted-foreground">{course.description}</p>
                   </div>
                   <Badge variant="outline" className="ml-4">
-                    {course.enrolledStudents} enrolled
+                    {`${course.enrolledStudents} enrolled`}
                   </Badge>
                 </div>
                 
@@ -220,18 +252,86 @@ export const CourseAnalytics = ({ courses }: CourseAnalyticsProps) => {
                   </div>
                 </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-2 mb-4">
                   <div className="flex items-center justify-between text-sm">
                     <span>Overall Progress</span>
                     <span>{getCompletionRate(course)}%</span>
                   </div>
                   <Progress value={getCompletionRate(course)} className="h-2" />
                 </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenCourseDetail(course.name)}
+                  className="w-full flex items-center justify-between"
+                >
+                  <span>View Detailed Analytics</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             ))}
+
+            {/* Alternative: Show courses from students if available */}
+            {allCourses.length > 0 && allCourses.length !== courses.length && (
+              <div className="border-t pt-6 mt-6">
+                <h3 className="font-semibold text-lg mb-4">All Available Courses</h3>
+                <div className="space-y-3">
+                  {allCourses.map((courseData) => {
+                    const courseStudents = courseData.students;
+                    const completedCount = courseStudents.filter(s => {
+                      const course = s.courses.find(c => c.courseName === courseData.name);
+                      return course && course.progress === 100;
+                    }).length;
+                    const inProgressCount = courseStudents.filter(s => {
+                      const course = s.courses.find(c => c.courseName === courseData.name);
+                      return course && course.progress > 0 && course.progress < 100;
+                    }).length;
+                    const completionRate = courseStudents.length > 0 
+                      ? Math.round((completedCount / courseStudents.length) * 100)
+                      : 0;
+
+                    return (
+                      <div key={courseData.name} className="border rounded-lg p-3 flex items-center justify-between hover:bg-accent/50 transition-colors">
+                        <div className="flex-1">
+                          <p className="font-medium">{courseData.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {courseStudents.length} enrolled • {completedCount} completed
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <p className="font-semibold">{completionRate}%</p>
+                            <Progress value={completionRate} className="h-1 w-20 mt-1" />
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenCourseDetail(courseData.name)}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Course Detail Modal */}
+      {selectedCourse && (
+        <CourseDetailModal
+          courseName={selectedCourse}
+          students={students}
+          isOpen={isDetailModalOpen}
+          onClose={() => setIsDetailModalOpen(false)}
+        />
+      )}
     </div>
   );
 };
+

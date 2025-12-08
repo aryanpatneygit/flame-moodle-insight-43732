@@ -8,6 +8,7 @@ import {
   BookOpen, 
   Settings, 
   RefreshCw,
+  Upload,
   Bell,
   ChevronDown
 } from "lucide-react";
@@ -21,8 +22,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface NavigationProps {
-  activeView: 'dashboard' | 'students' | 'courses' | 'settings';
-  onViewChange: (view: 'dashboard' | 'students' | 'courses' | 'settings') => void;
+  activeView: 'dashboard' | 'students' | 'courses' | 'settings' | 'upload';
+  onViewChange: (view: 'dashboard' | 'students' | 'courses' | 'settings' | 'upload') => void;
   onSync: () => void;
 }
 
@@ -39,6 +40,7 @@ export const Navigation = ({ activeView, onViewChange, onSync }: NavigationProps
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'students' as const, label: 'Students', icon: Users },
     { id: 'courses' as const, label: 'Courses', icon: BookOpen },
+    { id: 'upload' as const, label: 'Upload', icon: Upload },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
 
