@@ -57,13 +57,46 @@ export interface ParseOptions {
   courseId?: string;
 }
 
+// Simple CSV parser that handles quoted fields
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        // Escaped quote
+        current += '"';
+        i++; // Skip next quote
+      } else {
+        // Toggle quote state
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === ',' && !insideQuotes) {
+      // Comma outside quotes - field separator
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  // Add last field
+  result.push(current.trim());
+  return result;
+}
+
 export function parseCSV(csvText: string, options?: ParseOptions): Student[] {
   const lines = csvText.split('\n').filter(line => line.trim());
   if (lines.length < 2) {
     throw new Error('CSV file must have header and data rows');
   }
 
-  const headers = lines[0].split(',').map(h => h.trim());
+  const headers = parseCSVLine(lines[0]);
   
   // Find column indices
   const idIndex = headers.findIndex(h => h.toLowerCase() === 'id');
@@ -75,46 +108,52 @@ export function parseCSV(csvText: string, options?: ParseOptions): Student[] {
     throw new Error('CSV must contain ID, Name, and Email columns');
   }
 
-  // Group activities by course if first activity column is "Course Outline" or similar
+  // Group activities by course - filter out metadata columns
   const activityColumns: { index: number; name: string }[] = [];
   let courseGroups: Map<string, { activities: { index: number; name: string }[] }> = new Map();
   
-  let currentCourse = options?.courseName || 'General Course';
+  let currentCourse = options?.courseName || 'FLAME Onboarding & Foundation';
   let foundCourseHeader = false;
 
   for (let i = 0; i < headers.length; i++) {
-    const header = headers[i];
+    const header = headers[i].trim();
+    
+    // Skip these columns: ID, Name, Email, metadata with "date", "course complete", "course outline"
     if (
-      header !== 'ID' &&
-      header !== 'Name' &&
-      header !== 'Email address' &&
-      !header.includes('Completion date') &&
-      header.trim() !== ''
+      header.toLowerCase() === 'id' ||
+      header.toLowerCase() === 'name' ||
+      header.toLowerCase() === 'email address' ||
+      header.toLowerCase() === 'email' ||
+      header.toLowerCase().includes('completion date') ||
+      header.toLowerCase() === 'course complete' ||
+      header.toLowerCase() === 'course outline' ||
+      header === ''
     ) {
-      // Detect course name from first activity or header
-      if (!foundCourseHeader && (header.toLowerCase().includes('course') || header.toLowerCase().includes('outline'))) {
-        currentCourse = options?.courseName || header;
-        foundCourseHeader = true;
-      }
-
-      if (!courseGroups.has(currentCourse)) {
-        courseGroups.set(currentCourse, { activities: [] });
-      }
-      
-      courseGroups.get(currentCourse)!.activities.push({ index: i, name: header });
-      activityColumns.push({ index: i, name: header });
+      continue;
     }
+
+    // This is an activity column
+    if (!courseGroups.has(currentCourse)) {
+      courseGroups.set(currentCourse, { activities: [] });
+    }
+    
+    courseGroups.get(currentCourse)!.activities.push({ index: i, name: header });
+    activityColumns.push({ index: i, name: header });
   }
 
-  // If no course groups were created, use all activities as one course
-  if (courseGroups.size === 0 && activityColumns.length > 0) {
-    courseGroups.set(currentCourse, { activities: activityColumns });
+  // If no course groups were created, throw error
+  if (courseGroups.size === 0 || activityColumns.length === 0) {
+    throw new Error('CSV must contain activity columns with completion data');
   }
+  
+  console.log(`[DEBUG] Header analysis: ${headers.length} total headers`);
+  console.log(`[DEBUG] Activity columns found: ${activityColumns.length}`);
+  console.log(`[DEBUG] Activities by course:`, Array.from(courseGroups.entries()).map(([name, data]) => `${name}: ${data.activities.length}`));
 
   const students: Student[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const cells = lines[i].split(',').map(c => c.trim());
+    const cells = parseCSVLine(lines[i]);
     
     if (!cells[idIndex]) continue;
 
@@ -132,15 +171,25 @@ export function parseCSV(csvText: string, options?: ParseOptions): Student[] {
       let completedCount = 0;
 
       for (const col of courseData.activities) {
-        if (col.index < cells.length) {
-          const isCompleted = cells[col.index].toLowerCase() === 'completed';
-          completionFlags.push(isCompleted);
-          if (isCompleted) completedCount++;
-        }
+        // Check if cell exists and has content
+        const cellValue = col.index < cells.length ? cells[col.index]?.toLowerCase() : '';
+        const isCompleted = cellValue === 'completed';
+        completionFlags.push(isCompleted);
+        if (isCompleted) completedCount++;
       }
 
-      const courseTotal = completionFlags.length || 1;
+      const courseTotal = courseData.activities.length || 1;
       const courseProgress = Math.round((completedCount / courseTotal) * 100);
+      
+      // Debug logging for ID 10
+      if (id === '10') {
+        console.log(`[DEBUG] Student ${name} (ID ${id})`);
+        console.log(`  Course: ${courseName}`);
+        console.log(`  Activities in courseData.activities: ${courseData.activities.length}`);
+        console.log(`  Completed: ${completedCount}`);
+        console.log(`  Total: ${courseTotal}`);
+        console.log(`  Progress: ${courseProgress}%`);
+      }
 
       courses.push({
         courseId: `course-${courseName.toLowerCase().replace(/\s+/g, '-')}`,
