@@ -2,7 +2,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Users, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { GraduationCap, Users, TrendingUp, Download } from "lucide-react";
+import { useState } from "react";
 import type { Student } from "@/lib/mockData";
 
 interface CourseDetailModalProps {
@@ -18,6 +22,8 @@ export const CourseDetailModal = ({
   isOpen,
   onClose,
 }: CourseDetailModalProps) => {
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [progressRange, setProgressRange] = useState<[number, number]>([0, 100]);
   // Filter students with this course
   const courseStudents = students
     .map(student => {
@@ -29,9 +35,9 @@ export const CourseDetailModal = ({
 
   // Calculate course statistics
   const totalEnrolled = courseStudents.length;
-  const completed = courseStudents.filter(s => s.courseData.status === 'completed').length;
-  const inProgress = courseStudents.filter(s => s.courseData.status === 'in-progress').length;
-  const notStarted = courseStudents.filter(s => s.courseData.status === 'not-started').length;
+  const completed = courseStudents.filter(s => s.courseData.progress === 100).length;
+  const inProgress = courseStudents.filter(s => s.courseData.progress > 0 && s.courseData.progress < 100).length;
+  const notStarted = courseStudents.filter(s => s.courseData.progress === 0).length;
   const avgProgress = totalEnrolled > 0 
     ? Math.round(courseStudents.reduce((sum, s) => sum + s.courseData.progress, 0) / totalEnrolled)
     : 0;
@@ -47,6 +53,12 @@ export const CourseDetailModal = ({
     }
   };
 
+  const getStatusFromProgress = (progress: number) => {
+    if (progress === 100) return 'completed';
+    if (progress > 0) return 'in-progress';
+    return 'not-started';
+  };
+
   const getFlagColor = (flag: string) => {
     switch (flag) {
       case 'green':
@@ -56,6 +68,31 @@ export const CourseDetailModal = ({
       default:
         return 'bg-red-500';
     }
+  };
+
+  // Filter students based on status and progress range
+  const filteredStudents = courseStudents.filter(student => {
+    const studentStatus = getStatusFromProgress(student.courseData.progress);
+    const matchesStatus = statusFilter === "all" || studentStatus === statusFilter;
+    const matchesProgress = student.courseData.progress >= progressRange[0] && student.courseData.progress <= progressRange[1];
+    return matchesStatus && matchesProgress;
+  });
+
+  // Export filtered students
+  const handleExport = () => {
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + "Name,Email,Progress,Status,Flag\n"
+      + filteredStudents.map(s => 
+          `${s.name},${s.email},${s.courseData.progress}%,${getStatusFromProgress(s.courseData.progress)},${s.flag}`
+        ).join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${courseName}_students.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -167,8 +204,44 @@ export const CourseDetailModal = ({
           </TabsContent>
 
           <TabsContent value="students" className="space-y-4">
+            {/* Filter Controls */}
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="in-progress">In Progress</SelectItem>
+                    <SelectItem value="not-started">Not Started</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">Progress Range: {progressRange[0]}% - {progressRange[1]}%</label>
+                <Slider
+                  value={[progressRange[0], progressRange[1]]}
+                  onValueChange={(value) => setProgressRange([value[0], value[1]])}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                />
+              </div>
+
+              <Button onClick={handleExport} size="sm" className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
+            </div>
+
+            {/* Students List */}
             <div className="space-y-2">
-              {courseStudents.map((student) => (
+              {filteredStudents.map((student) => (
                 <div
                   key={student.id}
                   className="flex items-center justify-between p-3 bg-card border rounded-lg hover:bg-accent/50 transition-colors"
@@ -184,8 +257,8 @@ export const CourseDetailModal = ({
                       <Progress value={student.courseData.progress} className="h-1 w-24 mt-1" />
                     </div>
 
-                    <Badge className={getStatusColor(student.courseData.status)}>
-                      {`${student.courseData.status}`}
+                    <Badge className={getStatusColor(getStatusFromProgress(student.courseData.progress))}>
+                      {getStatusFromProgress(student.courseData.progress)}
                     </Badge>
 
                     <div
@@ -202,6 +275,12 @@ export const CourseDetailModal = ({
                 </p>
               )}
             </div>
+            
+            {filteredStudents.length === 0 && courseStudents.length > 0 && (
+              <p className="text-center text-muted-foreground py-8">
+                No students match the selected filters
+              </p>
+            )}
           </TabsContent>
 
           <TabsContent value="activities" className="space-y-4">

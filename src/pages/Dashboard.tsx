@@ -12,7 +12,7 @@ import { Users, GraduationCap, TrendingUp, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
-  const [activeView, setActiveView] = useState<'dashboard' | 'students' | 'courses' | 'settings' | 'upload'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'students' | 'courses' | 'upload'>('dashboard');
   const [students, setStudents] = useState<Student[]>(mockStudents);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
@@ -57,21 +57,6 @@ const Dashboard = () => {
   const handleStudentSelect = (student: Student) => {
     setSelectedStudent(student);
     setIsStudentModalOpen(true);
-  };
-
-  const handleSync = async () => {
-    toast({
-      title: "Sync Started",
-      description: "Fetching latest data from Moodle...",
-    });
-    
-    // Mock sync process
-    setTimeout(() => {
-      toast({
-        title: "Sync Complete",
-        description: "Successfully synchronized with Moodle database.",
-      });
-    }, 2000);
   };
 
   const renderDashboardView = () => (
@@ -162,13 +147,6 @@ const Dashboard = () => {
                   <p className="font-medium text-sm">Upload CSV</p>
                   <p className="text-xs text-muted-foreground">Import student data</p>
                 </button>
-                <button
-                  onClick={handleSync}
-                  className="w-full text-left px-3 py-2 rounded-md hover:bg-primary/10 transition-colors"
-                >
-                  <p className="font-medium text-sm">Sync with Moodle</p>
-                  <p className="text-xs text-muted-foreground">Update latest data</p>
-                </button>
               </div>
             </div>
           </div>
@@ -229,71 +207,11 @@ const Dashboard = () => {
     </div>
   );
 
-  const renderSettingsView = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-        <p className="text-muted-foreground">
-          Configure Moodle integration and system preferences
-        </p>
-      </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="bg-card border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Moodle Integration</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Moodle URL</label>
-              <input 
-                type="text" 
-                className="w-full mt-1 px-3 py-2 border rounded-md" 
-                placeholder="https://moodle.flame.edu.in"
-                disabled
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">API Token</label>
-              <input 
-                type="password" 
-                className="w-full mt-1 px-3 py-2 border rounded-md" 
-                placeholder="••••••••••••••••"
-                disabled
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Connect to Supabase to enable Moodle integration settings
-            </p>
-          </div>
-        </div>
-        
-        <div className="bg-card border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Sync Settings</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Auto-sync Interval</label>
-              <select className="w-full mt-1 px-3 py-2 border rounded-md" disabled>
-                <option>Every 6 hours</option>
-                <option>Daily</option>
-                <option>Weekly</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Last Sync</label>
-              <p className="text-sm text-muted-foreground mt-1">
-                2024-01-15 14:30:00 UTC
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5">
       <Navigation 
         activeView={activeView} 
         onViewChange={setActiveView}
-        onSync={handleSync}
       />
       
       <main className="container mx-auto px-4 py-8">
@@ -301,7 +219,6 @@ const Dashboard = () => {
         {activeView === 'students' && renderStudentsView()}
         {activeView === 'courses' && renderCoursesView()}
         {activeView === 'upload' && renderUploadView()}
-        {activeView === 'settings' && renderSettingsView()}
       </main>
 
       <StudentDetailModal

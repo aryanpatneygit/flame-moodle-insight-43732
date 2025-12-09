@@ -17,18 +17,14 @@ interface StudentsTableProps {
 export const StudentsTable = ({ students, onStudentSelect }: StudentsTableProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [batchFilter, setBatchFilter] = useState<string>("all");
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          student.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || student.status === statusFilter;
-    const matchesBatch = batchFilter === "all" || student.batch === batchFilter;
     
-    return matchesSearch && matchesStatus && matchesBatch;
+    return matchesSearch && matchesStatus;
   });
-
-  const uniqueBatches = [...new Set(students.map(s => s.batch))];
 
   const handleExport = () => {
     // Mock export functionality
@@ -78,18 +74,6 @@ export const StudentsTable = ({ students, onStudentSelect }: StudentsTableProps)
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="in-progress">In Progress</SelectItem>
               <SelectItem value="not-started">Not Started</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Select value={batchFilter} onValueChange={setBatchFilter}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Batch" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Batches</SelectItem>
-              {uniqueBatches.map(batch => (
-                <SelectItem key={batch} value={batch}>{batch}</SelectItem>
-              ))}
             </SelectContent>
           </Select>
         </div>
