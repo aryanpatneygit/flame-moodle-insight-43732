@@ -34,14 +34,17 @@ export const Navigation = ({ activeView, onViewChange }: NavigationProps) => {
     <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo and Title */}
-          <div className="flex items-center gap-4">
+          {/* Logo and Title - Clickable */}
+          <div 
+            className="flex items-center gap-4 cursor-pointer hover:opacity-75 transition-opacity"
+            onClick={() => onViewChange('dashboard')}
+          >
             <div className="bg-gradient-to-r from-primary to-info text-white p-2 rounded-lg">
               <LayoutDashboard className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-xl font-bold">FLAME University</h1>
-              <p className="text-sm text-muted-foreground">Digital Learning Centre</p>
+              <p className="text-sm text-muted-foreground">Centre for Digital Learning</p>
             </div>
           </div>
 
